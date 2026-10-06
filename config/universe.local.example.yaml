@@ -1,0 +1,11 @@
+# Copy to universe.local.yaml (git-ignored) and list what you actually own.
+# Deep-merged over universe.yaml at load time; lists REPLACE the base lists.
+real_holdings:
+  - ticker: MSFT01
+    name: "DR on Microsoft"
+    yahoo: MSFT01.BK          # the DR's own Yahoo ticker
+    underlying: MSFT          # US underlying for the fair-value model
+    ratio: null               # DR units per underlying share (issuer fact sheet)
+    sector: Software
+    geo: US
+closed_positions: []

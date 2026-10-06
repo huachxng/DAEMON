@@ -1,0 +1,7 @@
+# Earnings calendar for held underlyings — refreshed at the weekly research pass.
+# Dates from the 2026-08-14 research deck (+ its cited calendars); MU re-verified 2026-09-22.
+MU: 2026-09-30   # after US close; corrected 2026-09-22 (Micron press release 26 Aug; Yahoo shows Oct 1 = same event in UTC+)
+ASML: 2026-10-14
+AMZN: 2026-10-22
+MSFT: 2026-10-27
+PLTR: 2026-11-02   # unconfirmed; some calendars show Nov 9

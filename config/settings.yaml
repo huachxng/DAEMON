@@ -1,0 +1,81 @@
+# CLAUDE TRADE — global settings
+# Everything time-related uses Asia/Bangkok (ICT). Money is THB unless stated.
+
+timezone: Asia/Bangkok
+
+books:
+  real:
+    broker: "Bualuang Securities (Streaming)"
+    currency: THB
+    # Equity = positions + cash + receivable. The owner's actual cash figures
+    # (cash_balance_thb, receivable_thb, cash_as_of) live in the git-ignored
+    # settings.local.yaml -- see settings.local.example.yaml. Missing = 0.
+    # Alert-only lines (Claude never trades this book):
+    alert_floor_thb: 150000      # user's ultimate cut-loss line -> urgent alert
+    warn_floor_thb: 165000       # early warning before the floor
+  live:
+    # The daemon's REAL-money sleeve (user executes every ticket in Streaming).
+    # Universe: SET ETFs + verified DRs only — nothing the account can't trade.
+    # Deployment 80% (user 2026-08-23: "more risk-taking, but hold the floor
+    # strong"). Historical-worst at 80% brushes the breaker, so the floor
+    # defence is graduated: <=160k halves every target (SELL tickets), <=155k
+    # liquidates. The 150k line stays unreachable by construction.
+    currency: THB
+    start_cash_thb: 200000
+    sleeves: {tdex: 0.25, dr_momentum: 0.55}   # ~20% cash by construction
+    momentum_top_n: 3                           # 2026-08-23: top-3 beat top-5 (CAGR 31% vs 25%,
+                                                # fewer trades) with real frictions; user chose it
+    rebalance_every_months: 3                   # quarterly won the friction backtest
+    halt_buys_below_thb: 160000
+    halt_derisk_factor: 0.5                     # at halt: targets x0.5 -> active de-risk
+    liquidate_below_thb: 155000
+    hard_floor_thb: 150000
+    # Per-name cap for SINGLE-STOCK risk: 55% momentum sleeve / 3 slots ≈ 18%
+    # each, so 20% leaves a winner room to run. The tdex sleeve above is the
+    # deliberate exception, not a contradiction: TDEX.BK is a SET50 index ETF —
+    # 50 companies in one line — the diversifier, sized at 25% on purpose. The
+    # concentration alert knows this: config/rules.yaml benchmark_sleeve_pct.
+    max_position_pct: 20
+    min_ticket_notional_thb: 10000              # no dust tickets (fee is flat 0.2215%;
+                                                # this guards the user's attention)
+  paper:
+    currency: THB
+    start_cash_thb: 200000
+    # Hard circuit breaker (enforced in code, tested in tests/):
+    halt_buys_below_thb: 160000      # no new buys, de-risk
+    liquidate_below_thb: 155000      # everything to cash, stop until user review
+    hard_floor_thb: 150000           # must be unreachable by construction
+    max_position_pct: 15             # per-name cap, % of book equity — single
+                                     # stocks only. The Thai sleeve holds the
+                                     # SET50 ETF TDEX.BK at 45% by design (see
+                                     # docs/trading-rules.md); an index ETF is
+                                     # not single-name risk, and the
+                                     # concentration alert exempts it.
+    min_cash_buffer_pct: 10
+
+fees:
+  thai:
+    # CALIBRATED 2026-08-14 from a real BLS contract note: (fee + VAT) / notional
+    # = 0.2215% per side, flat. Re-confirmed on later fills (see tests/test_fees.py).
+    commission_rate: 0.002215        # all-in per side, incl. VAT (empirical)
+    min_fee_thb: 0                   # NO minimum: MSFT01/TDEX fills are exactly 0.2215% (2026-08-17)
+  us_paper:
+    per_share_usd: 0.005
+    min_fee_usd: 1.0
+
+slippage_bps:
+  liquid: 10        # SET50 / US large-cap
+  dr_or_small: 25   # Thai DRs and less-liquid names
+
+digest:
+  morning_ict: "08:30"   # US close recap + SET pre-open + alerts (email)
+  evening_ict: "17:45"   # SET close: data update + paperbot Thai decisions (no email)
+  languages: [th, en]
+
+data:
+  db_path: data/market.db
+  # One EOD pull per market per day; yfinance (free, delayed/EOD).
+
+github_pages:
+  repo: huachxng/ct-da09852e          # public, noindex; holds ONLY generated pages
+  url: https://huachxng.github.io/ct-da09852e/

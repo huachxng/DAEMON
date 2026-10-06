@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+data/*.db
+reports/*.html
+.pytest_cache/
+config/settrade.yaml
+site/
+config/*.local.yaml
+public/

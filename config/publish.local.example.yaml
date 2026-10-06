@@ -1,0 +1,9 @@
+# Copy to publish.local.yaml (git-ignored). scripts/publish_source.py refuses
+# to publish unless at least three patterns are listed. Put here every string
+# that must never reach the public repo: broker account numbers, e-mail
+# addresses, machine hostnames, real cash balances, API credentials.
+author: "Your Name <you@users.noreply.github.com>"   # git author used on public commits
+leak_patterns:
+  - "1234567"                      # broker account number
+  - "you@example\\.com"            # e-mail address
+  - "app_secret:\\s*['\"]?[A-Za-z0-9]{8,}"   # a filled-in Settrade secret

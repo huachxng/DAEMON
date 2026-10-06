@@ -1,0 +1,11 @@
+# Copy to config/settrade.yaml and fill in YOURSELF. settrade.yaml is git-ignored.
+# Claude never reads these values back to you and never asks for them in chat.
+#
+# Get app_id / app_secret / app_code from https://developer.settrade.com after
+# registering (Investor type). broker_id for Bualuang: ask BLS support, or use
+# "SANDBOX" first to test against Settrade's paper environment (broker 098/uat).
+app_id: ""
+app_secret: ""
+app_code: ""
+broker_id: "SANDBOX"       # "SANDBOX" to test; your BLS broker id for the real account
+account_no: ""             # e.g. "1234567" for equity (Streaming shows it bottom-left)

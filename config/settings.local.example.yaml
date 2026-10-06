@@ -1,0 +1,7 @@
+# Copy to settings.local.yaml (git-ignored) and fill in your own numbers.
+# Anything here is deep-merged over settings.yaml at load time.
+books:
+  real:
+    cash_balance_thb: 0        # broker cash balance, THB
+    receivable_thb: 0          # unsettled sale proceeds (T+2), THB
+    cash_as_of: "2026-01-01"

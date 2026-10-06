@@ -1,0 +1,68 @@
+# Alert rules — evaluated deterministically by src/alerts on every scheduled run.
+# Each rule fires an event with bilingual messages; delivery (email/push) is decided
+# by severity: urgent -> push + email, info -> next digest email only.
+#
+# applies_to names the BOOKS a rule fires on. There are three books:
+#   real  — the user's own BLS positions. REPORT-ONLY: the daemon never manages
+#           them ("Don't manage my own stock", 2026-08-14), so no rule fires here.
+#   live  — the daemon's real-money sleeve (user executes every ticket).
+#   paper — the simulated book.
+# src/alerts/engine.py evaluates DAEMON_BOOKS = ("live", "paper"), so applies_to
+# on the per-book rules must match that list or the config is lying to you.
+
+rules:
+  - id: concentration
+    description: "Single position exceeds max share of book"
+    applies_to: [live, paper]
+    threshold_pct: 25            # ordinary per-name cap (any name that is not the benchmark)
+    # The benchmark ETF (universe.yaml benchmarks.set_fallback = TDEX.BK) is held
+    # BIG ON PURPOSE — it is the Thai sleeve, not an accident of drift — so a 25%
+    # cap would page the user every single evening about a position the strategy
+    # designed. It gets its own ceiling per book instead: designed sleeve + tolerance.
+    benchmark_sleeve_pct:        # designed sleeve weight of the benchmark, per book
+      live: 25                   # settings.yaml books.live.sleeves.tdex = 0.25
+      paper: 45                  # docs/trading-rules.md Thai sleeve; src/paperbot/bot.py decide()
+    benchmark_tolerance_pct: 5   # room for ordinary price drift between rebalances,
+                                 # so a sleeve sitting AT its target cannot flap
+    severity: urgent
+
+  - id: floor_proximity_real
+    description: "Real book equity approaching the 150k cut-loss line"
+    # UNRESOLVED (flagged 2026-08-19): these thresholds match books.real
+    # (warn_floor_thb 165000), but src/alerts/engine.py feeds this rule the
+    # LIVE book's equity. Left as-is — ask the user which book it should watch.
+    applies_to: [real]
+    warn_at_thb: 165000
+    urgent_at_thb: 157000
+    severity: urgent
+
+  - id: paper_circuit_breaker
+    description: "Daemon book breaker states (halt/liquidate) — always urgent"
+    # The engine runs the breaker on BOTH daemon books and logs the hit under
+    # '<book>_circuit_breaker' (live_circuit_breaker / paper_circuit_breaker).
+    applies_to: [live, paper]
+    severity: urgent
+
+  - id: drawdown   # NOT IMPLEMENTED YET — engine does not evaluate this
+    description: "Book drawdown from peak exceeds threshold"
+    applies_to: [real, paper]
+    threshold_pct: 10
+    severity: info
+
+  - id: earnings_proximity   # NOT IMPLEMENTED YET — engine does not evaluate this
+    description: "Earnings within N days on any held name (or its DR underlying)"
+    applies_to: [real, paper]
+    days: 3
+    severity: info
+
+  - id: dr_premium   # NOT IMPLEMENTED YET — engine does not evaluate this
+    description: "DR trading rich/cheap vs modeled fair value"
+    applies_to: [real]
+    threshold_pct: 3
+    severity: info
+
+  - id: volume_anomaly
+    description: "Volume > N x 20-day average on a held/watched name"
+    applies_to: [live, paper]
+    multiple: 3
+    severity: info

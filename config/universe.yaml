@@ -1,0 +1,44 @@
+# Tradable/watched universe.
+# # The owner's actual positions (real_holdings / closed_positions) live in the
+# git-ignored universe.local.yaml -- see universe.local.example.yaml. The
+# report-only personal book works with these empty; the live and paper books
+# never read them.
+real_holdings: []
+closed_positions: []
+
+# Paperbot candidate universe (liquid names only; refined with user over time).
+watchlist:
+  set:            # SET large-caps, Yahoo suffix .BK added by datafeed
+    [PTT, AOT, CPALL, KBANK, SCB, BDMS, ADVANC, GULF, PTTEP, BBL,
+     TRUE, CPN, MINT, TISCO, KTB, SCC, HMPRO, CRC, BH, OR]
+  us:
+    [AAPL, MSFT, NVDA, GOOGL, AMZN, META, AVGO, TSLA, LLY, JPM,
+     V, COST, ASML, AMD, MU, SPOT, NFLX, ORCL, XOM, UNH]
+  macro:          # tracked for context only — NOT rankable, not tradable at BLS
+    ["CL=F", "BZ=F", "GC=F"]   # WTI crude, Brent crude, gold futures
+
+benchmarks:
+  set: "^SET.BK"        # fallback: TDEX.BK (SET50 ETF) — datafeed decides
+  set_fallback: "TDEX.BK"
+  us: "^GSPC"
+  fx: "THB=X"           # USD/THB
+
+# Executable DR map (verified on Yahoo 2026-08-14): momentum signals are computed
+# on the US underlying (long history), orders are issued on the SET-listed DR.
+# DR chosen per underlying = highest 20d volume among verified issues.
+dr_map:
+  - {underlying: MSFT,  dr: MSFT01.BK}
+  - {underlying: PLTR,  dr: PLTR01.BK}
+  - {underlying: ORCL,  dr: ORCL01.BK}
+  - {underlying: NVDA,  dr: NVDA06.BK}
+  - {underlying: GOOGL, dr: GOOGL01.BK}
+  - {underlying: CRM,   dr: CRM01.BK}
+  - {underlying: ISRG,  dr: ISRG01.BK}
+  - {underlying: AMZN,  dr: AMZN06.BK}
+  - {underlying: AAPL,  dr: AAPL01.BK}
+  - {underlying: TSLA,  dr: TSLA01.BK}
+  - {underlying: ASML,  dr: ASML01.BK}
+  - {underlying: META,  dr: META01.BK}
+  - {underlying: MU,    dr: MICRON01.BK}
+  - {underlying: SPOT,  dr: SPOT06.BK}
+# NDX01.BK = Nasdaq-100 DR (748k vol) — candidate core holding, tracked too.
