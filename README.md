@@ -1,84 +1,105 @@
 # DAEMON
 
-A rules-based trading daemon for Thai-listed depositary receipts (DRs) on US
-stocks, run as a two-month live experiment on the Stock Exchange of Thailand
-starting 15 August 2026. Internal code name: CLAUDE TRADE.
+A Python program that decides what to buy and sell on the Thai stock exchange
+and tells me. I place the orders myself in the broker app. It has no access to
+the account.
 
-The daemon pulls end-of-day data, ranks a universe of US underlyings by
-momentum, converts the picks into orders on their SET-listed DRs, and issues
-**order tickets**. A human places every order at the broker. The daemon never
-touches an account. It then tracks fills, enforces protective exits, defends a
-hard capital floor, and publishes a bilingual (Thai/English) ledger.
+It trades DRs, which are Thai-listed receipts on US stocks (MICRON01 is Micron,
+PLTR01 is Palantir, and so on). They trade on SET in baht, and the DR night
+session follows US hours.
 
-Live results, order log and risk plan: **https://huachxng.github.io/ct-da09852e/**
+I started it with 200,000 baht on 15 August 2026 as a two-month experiment.
+On day 60 (13 October) it was at 210,777, up 5.4%. As I write this it is at
+202,248. The live ledger is here: https://huachxng.github.io/ct-da09852e/
 
-## How it decides
+I built it with Claude Code while learning Python. The code is deliberately
+small and plain so I can read all of it.
 
-| Layer | Rule |
-|---|---|
-| Signal | Top-3 of 14 US underlyings by 126-day return, only if above their 200-day average |
-| Execution | Orders go on the matching SET DR (`config/universe.yaml` → `dr_map`); DRs trade a night session that tracks US hours |
-| Sizing | 55% momentum sleeve, 25% SET50 ETF (TDEX), ~20% cash; 20% cap per name; no ticket under ฿10k except full exits |
-| Re-pick | Quarterly. Between re-picks the book converges to persisted targets |
-| Exits | Hard stop −20% from cost · trend break (underlying < 200-day average) · rotation at re-pick |
-| Floor | ≤฿160k halve every target · ≤฿155k liquidate · ฿150k unreachable by construction |
-| Costs | Bualuang all-in 0.2215% per side, calibrated from real fills (no minimum) |
+## What it does every day
 
-Three books share one SQLite ledger: **live** (the daemon's real-money sleeve,
-human-executed), **personal** (the owner's own positions, report-only, never
-advised on), and **paper** (an autonomous US-stock sandbox).
+1. After the SET close it pulls end-of-day prices from Yahoo Finance for 14 US
+   stocks that have Thai DRs, plus the DRs themselves, TDEX (the SET50 ETF)
+   and the dollar-baht rate.
+2. It ranks the 14 by their return over the last 126 trading days and keeps
+   only names above their own 200-day average. The top 3 get the money, 55% of
+   the book split three ways. Another 25% sits in TDEX. The rest is cash.
+3. It re-picks the top 3 every three months. In between it just holds, unless
+   a name falls 20% below what I paid for it or drops under its 200-day
+   average. Then it sells.
+4. If the book ever drops to 160,000 it halves every position. At 155,000 it
+   sells everything. 150,000 is the line I told it never to cross.
+5. If any of that means an order, it writes a ticket (buy 3,600 PLTR01 around
+   5.15) and emails it to me. I place the order, then reply "filled 3600 PLTR01
+   @ 5.15" and it logs the fill.
 
-## What the backtests said
+Most days the answer is "no tickets". It has made 12 trades in two months and
+paid 453 baht in commission.
 
-All in `docs/backtests/`, run in THB with real fees and DR spread costs on an
-honest engine (decide on close, fill at next open, slippage against you):
-
-- Thai-stock momentum loses to holding the SET50 ETF after fees. Rejected.
-- US momentum via DRs: top-3 quarterly beat the survivorship-matched equal-weight control; chosen.
-- Faster rotation (weekly, fortnightly) is worse after costs; parameter "optimisation" has ~0 rank correlation out of sample.
-- Every take-profit rule tested made less money than holding winners with stops; a fixed +25% target cut four-year growth from 6.1x to 2.9x.
-
-## Layout
+## What is in here
 
 ```
-config/     settings, rules, universe, earnings calendar — all behaviour is declared here
-            *.local.yaml (git-ignored) hold one person's holdings and cash; examples committed
-src/        datafeed · portfolio (FIFO lots, fees, SET ticks) · risk (exits, stop-watch, radar,
-            performance) · backtest · paperbot (daily decision) · digest (reports, levels) · alerts
-scripts/    update.py (data) · daily_run.py (decide + tickets) · log_trade.py / log_order.py
-            (fills, placed, cancelled) · report.py · risk_plan.py · performance.py ·
-            build_dashboard.py + publish_github.py (ledger site) · stop_watch.py · radar.py ·
-            settrade_sync.py (read-only broker reconciliation) · publish_source.py (this repo)
-tests/      pytest; every piece of financial math is checked against hand-computed cases
-docs/       trading rules, graded lessons, backtest write-ups
-data/       market.db (git-ignored): prices, trades, tickets, order events, journal, equity
+config/     settings.yaml     book sizes, floors, fee rate, sleeves
+            universe.yaml     the 14 stocks and their DR tickers, watchlists
+            rules.yaml        alert thresholds
+            earnings.yaml     earnings dates for the names it holds
+            *.local.yaml      my own holdings and cash. Not in git. Examples are.
+src/        datafeed/   Yahoo download, the SQLite store, read-only Settrade sync
+            portfolio/  FIFO lots, P&L, the fee model, SET tick sizes
+            backtest/   a small daily backtest engine and the momentum strategy
+            paperbot/   the daily decision: targets, sizing, breaker, tickets
+            risk/       exits, cut-loss watchdog, earnings radar, performance math
+            digest/     the HTML report and the cut-loss levels table
+            alerts/     concentration and volume alerts
+            options/    Black-Scholes, used by the paper book only
+scripts/    update.py          pull data
+            daily_run.py       decide and print tickets
+            log_trade.py       record a fill
+            log_order.py       record placed / cancelled
+            report.py, risk_plan.py, performance.py, research_deck.py   HTML pages
+            build_dashboard.py, publish_github.py   the ledger site
+            stop_watch.py      warns me when a price is near a cut-loss
+            radar.py           flags big moves and earnings within 5 days
+            settrade_sync.py   compares the broker's positions with the ledger
+            publish_source.py  pushes this repo (strips private files first)
+tests/      30 files. Every bit of money math has a hand-worked example.
+docs/       the rules, graded lessons, and the backtest write-ups
+data/       market.db, SQLite. Prices, trades, tickets, journal, equity. Not in git.
 ```
+
+There are three "books" in the database. `live` is the daemon's 200k. `paper`
+is a simulated US-stock sandbox it trades on its own. `real` is my personal
+account, which it only reports on.
 
 ## Running it
 
-```bash
+```
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-cp config/settings.local.example.yaml config/settings.local.yaml   # your cash figures
-cp config/universe.local.example.yaml config/universe.local.yaml   # your holdings
-.venv/bin/python scripts/update.py       # pull EOD prices, FX, dividends
-.venv/bin/python scripts/daily_run.py    # decide, print tickets, snapshot equity
-.venv/bin/python scripts/report.py       # bilingual HTML report
-.venv/bin/python -m pytest               # test suite
+cp config/settings.local.example.yaml config/settings.local.yaml
+cp config/universe.local.example.yaml config/universe.local.yaml
+.venv/bin/python scripts/update.py
+.venv/bin/python scripts/daily_run.py
+.venv/bin/python -m pytest
 ```
 
-Fills are logged by hand (`scripts/log_trade.py live BUY MSFT01.BK 3700 4.82 --fees 39.50`)
-or reconciled read-only from the Settrade Open API (`config/settrade.example.yaml`).
+## Things I learned the hard way
 
-## Limitations, stated plainly
+- Bualuang charges 0.2215% per side, all in, with no minimum. I assumed a
+  50 baht minimum for a week. The real fills proved otherwise.
+- The daemon once ticketed a sell of 100 AMZN06 worth 212 baht to fix a 0.1%
+  drift. I executed it. It lost 9 baht. Now no ticket is under 10,000 baht
+  unless it is a full exit.
+- I asked it to rotate faster to make more money. The backtest said weekly
+  rotation is the worst of every setting tried, because of fees and spread.
+  See `docs/backtests/2026-09-21.md`.
+- I asked it to take profit. Every take-profit rule tested made less than
+  holding with stops, by a lot. See `docs/backtests/2026-09-24.md`.
+- The broker's average cost is FIFO across the whole account, so if you hold
+  the same DR in two "books" the app's P&L for that name is meaningless.
 
-- Free end-of-day data (Yahoo Finance). No intraday anything.
-- The DR universe is hindsight-picked: only names that earned a Thai DR are in it, so absolute backtest returns are inflated. Comparisons between rules are what the backtests are for.
-- Signals use the US underlying; DR premium/discount and thin night-session liquidity are not modelled.
-- Two months is not a track record.
+## Caveats
 
-**Not investment advice.** This is one person's bookkeeping and a coded rulebook,
-published so the reasoning can be read and the mistakes can be seen.
+Yahoo Finance, end of day, nothing intraday. The 14-stock universe is the
+stocks that happen to have Thai DRs, which is hindsight. Two months is not a
+track record. This is my money and my rules. Don't copy them.
 
-## License
-
-MIT.
+MIT license.
