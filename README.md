@@ -1,16 +1,15 @@
 # DAEMON
 
-A Python program that decides what to buy and sell on the Thai stock exchange
-and tells me. I place the orders myself in the broker app. It has no access to
-the account.
+A Python program that decides what to buy and sell on the Thai stock exchange.
 
 It trades DRs, which are Thai-listed receipts on US stocks (MICRON01 is Micron,
 PLTR01 is Palantir, and so on). They trade on SET in baht, and the DR night
 session follows US hours.
 
-I started it with 200,000 baht on 15 August 2026 as a two-month experiment.
-On day 60 (13 October) it was at 210,777, up 5.4%. As I write this it is at
-202,248. The live ledger is here: https://huachxng.github.io/ct-da09852e/
+This experiments started with 200,000 baht on 15 August 2026 for two-month period.
+On day 60 (13 October) it was at 210,777, up 5.4%.
+
+The live ledger is here: https://huachxng.github.io/ct-da09852e/
 
 I built it with Claude Code while learning Python. The code is deliberately
 small and plain so I can read all of it.
@@ -81,20 +80,13 @@ cp config/universe.local.example.yaml config/universe.local.yaml
 .venv/bin/python -m pytest
 ```
 
-## Things I learned the hard way
+## Logged Mistakes
 
-- Bualuang charges 0.2215% per side, all in, with no minimum. I assumed a
-  50 baht minimum for a week. The real fills proved otherwise.
 - The daemon once ticketed a sell of 100 AMZN06 worth 212 baht to fix a 0.1%
   drift. I executed it. It lost 9 baht. Now no ticket is under 10,000 baht
   unless it is a full exit.
-- I asked it to rotate faster to make more money. The backtest said weekly
-  rotation is the worst of every setting tried, because of fees and spread.
-  See `docs/backtests/2026-09-21.md`.
-- I asked it to take profit. Every take-profit rule tested made less than
+- Every take-profit rule tested made less than
   holding with stops, by a lot. See `docs/backtests/2026-09-24.md`.
-- The broker's average cost is FIFO across the whole account, so if you hold
-  the same DR in two "books" the app's P&L for that name is meaningless.
 
 ## Caveats
 
